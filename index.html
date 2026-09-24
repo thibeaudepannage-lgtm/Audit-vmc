@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diag VMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EDEF; --panel:#FFFFFF; --ink:#18222C; --muted:#5A6874; --line:#CBD3D9;
+  --steel:#3E5566; --signal:#F2C200; --signal-ink:#1A1600;
+  --ok:#2E7D4F; --warn:#B7791F; --ko:#B8322A; --info:#3E6FA8;
+  --lcd:#C3CFBC; --lcd-ink:#1D2A1A; --lcd-dim:#9DAD95;
+  --font:"Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171C; --panel:#1B242B; --ink:#E6ECEF; --muted:#94A3AE; --line:#2F3C46;
+    --steel:#8FB0C6; --lcd:#26311F; --lcd-ink:#CFE6BF; --lcd-dim:#4A5A40;
+    --ok:#5DBB82; --warn:#E0A94A; --ko:#EE6B60; --info:#7FA9DB;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171C; --panel:#1B242B; --ink:#E6ECEF; --muted:#94A3AE; --line:#2F3C46;
+  --steel:#8FB0C6; --lcd:#26311F; --lcd-ink:#CFE6BF; --lcd-dim:#4A5A40;
+  --ok:#5DBB82; --warn:#E0A94A; --ko:#EE6B60; --info:#7FA9DB;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+header.top{padding:18px 16px 10px;max-width:760px;margin:0 auto;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+header.top .brand{display:flex;align-items:center;gap:12px}
+img.logo{height:52px;width:auto;background:#fff;border-radius:8px;padding:3px 6px;display:block}
+.replogo{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.replogo img{height:78px;width:auto;background:#fff;border-radius:8px;padding:4px 8px}
+.replogo .t{text-align:right;font-stretch:80%;font-weight:750;font-size:1.2rem}
+header.top h1{margin:0;font-stretch:75%;font-weight:800;font-size:1.9rem;letter-spacing:-.01em;line-height:1}
+header.top h1 span{display:inline-block;background:var(--signal);color:var(--signal-ink);padding:0 .25em;margin-left:.15em;border-radius:3px}
+header.top .sub{color:var(--muted);font-size:.85rem;text-align:right}
+main{max-width:760px;margin:0 auto;padding:0 12px}
+.tab{display:none}
+.tab.active{display:block}
+h2{font-stretch:80%;font-weight:750;font-size:1.35rem;margin:14px 4px 8px}
+h3{font-stretch:85%;font-weight:700;font-size:1.05rem;margin:0 0 8px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+label.f{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:10px;width:100%}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--signal);outline-offset:1px}
+textarea{min-height:90px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hint{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px 14px;font-weight:600}
+.btn.primary{background:var(--steel);border-color:var(--steel);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0f171d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0f171d}}
+.btn.ghost{background:transparent}
+.btn.small{padding:6px 10px;font-size:.85rem}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:transparent;color:var(--ink);padding:9px 6px;font-size:.9rem;font-weight:600;min-width:60px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--steel);color:var(--bg)}
+/* pièces */
+.counter{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.counter:last-of-type{border-bottom:0}
+.counter .lbl small{display:block;color:var(--muted);font-size:.8rem}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:1.3rem;font-weight:700}
+.stepper output{min-width:24px;text-align:center;font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.typebadge{display:flex;align-items:center;gap:14px;margin-top:12px;padding:12px;border-radius:8px;background:var(--bg)}
+.typebadge b{font-stretch:70%;font-size:2.6rem;line-height:1;font-weight:800}
+details.help{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+details.help summary{cursor:pointer;color:var(--info);font-weight:600;font-size:.9rem}
+details.help p,details.help li{font-size:.9rem}
+/* bouches */
+.bouche{border-left:5px solid var(--line)}
+.bouche[data-st="ok"]{border-left-color:var(--ok)}
+.bouche[data-st="limite"],.bouche[data-st="eleve"]{border-left-color:var(--warn)}
+.bouche[data-st="ko"]{border-left-color:var(--ko)}
+.bh{display:flex;gap:8px;align-items:center}
+.bh select{font-weight:700}
+.sep{height:1px;background:var(--line);margin:12px 0}
+.area{font-size:.9rem;margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.area b{font-variant-numeric:tabular-nums}
+.ta{display:inline-block;background:var(--signal);color:var(--signal-ink);border-radius:4px;padding:0 6px;font-weight:700}
+.lcd{margin-top:12px;background:var(--lcd);color:var(--lcd-ink);border-radius:8px;padding:12px 14px;border:3px solid #1f2427;box-shadow:inset 0 2px 6px rgba(0,0,0,.18)}
+.lcd .top{display:flex;justify-content:space-between;font-size:.72rem;font-weight:700;opacity:.8}
+.lcd .val{font-stretch:62%;font-weight:700;font-size:3.1rem;line-height:1;font-variant-numeric:tabular-nums;text-align:right;letter-spacing:.02em}
+.lcd .val small{font-size:.9rem;font-stretch:100%;margin-left:4px}
+.lcd .val.empty{color:var(--lcd-dim)}
+.gauge{position:relative;height:12px;background:rgba(0,0,0,.12);border-radius:3px;margin:10px 0 4px;overflow:hidden}
+.gauge .tol{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.12)}
+.gauge .fill{position:absolute;left:0;top:0;bottom:0;background:var(--lcd-ink)}
+.gauge .tick{position:absolute;top:-2px;bottom:-2px;width:3px;background:#B8322A}
+.lcd .foot{display:flex;justify-content:space-between;font-size:.8rem;font-weight:600;gap:8px}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:.8rem;font-weight:700;color:#fff}
+.pill.ok{background:var(--ok)}.pill.limite,.pill.eleve{background:var(--warn)}.pill.ko{background:var(--ko)}.pill.info,.pill.none{background:var(--muted)}
+:root[data-theme="dark"] .pill{color:#0f171d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill{color:#0f171d}}
+.addrow{display:flex;flex-wrap:wrap;gap:8px}
+.total{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.total .n{font-stretch:70%;font-weight:800;font-size:1.9rem;font-variant-numeric:tabular-nums}
+.pts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:3px 4px 3px 10px;font-size:.88rem;font-variant-numeric:tabular-nums}
+.chip b{color:var(--muted);font-weight:600}
+.chip button{border:0;background:transparent;color:var(--muted);width:26px;height:26px;border-radius:99px;font-size:1rem;line-height:1}
+.chip button:hover{background:var(--line);color:var(--ink)}
+.addpt{display:flex;gap:8px}
+.addpt input{flex:1}
+.pattern{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0}
+.pattern figure{margin:0;text-align:center;font-size:.8rem;color:var(--muted)}
+.pattern svg{width:110px;height:110px;display:block;color:var(--ink)}
+/* checklist-css */
+.ck{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.ck:last-child{border-bottom:0}
+.ck span{font-size:.93rem}
+.ck small{display:block;color:var(--muted);font-size:.8rem}
+.tri{display:flex;flex-shrink:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.tri button{border:0;background:transparent;color:var(--muted);padding:7px 9px;font-size:.78rem;font-weight:700}
+.tri button+button{border-left:1px solid var(--line)}
+.tri button[aria-pressed="true"][data-v="ok"]{background:var(--ok);color:#fff}
+.tri button[aria-pressed="true"][data-v="nok"]{background:var(--ko);color:#fff}
+.tri button[aria-pressed="true"][data-v="na"]{background:var(--muted);color:#fff}
+/* rapport */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.concl{padding:12px;border-radius:8px;background:var(--bg);font-weight:600}
+.help-body p,.help-body li{font-size:.94rem}
+.help-body ol,.help-body ul{padding-left:20px}
+.ref th,.ref td{text-align:center}
+.ref th:first-child,.ref td:first-child{text-align:left}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+  display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
+nav.bottom .in{display:flex;max-width:760px;width:100%}
+nav.bottom button{flex:1;border:0;background:transparent;color:var(--muted);padding:10px 2px 12px;font-size:.78rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav.bottom button svg{width:22px;height:22px}
+nav.bottom button[aria-selected="true"]{color:var(--ink)}
+nav.bottom button[aria-selected="true"] svg{color:var(--steel)}
+nav.bottom button[aria-selected="true"]::after{content:"";width:22px;height:3px;background:var(--signal);border-radius:2px;margin-top:2px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+@media (max-width:420px){.grid3{grid-template-columns:1fr 1fr}.lcd .val{font-size:2.6rem}}
+@media print{
+  header.top{display:none!important}
+  .replogo img{background:none}
+  nav.bottom,.no-print,header.top .sub{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .tab{display:none!important}
+  #tab-rapport{display:block!important}
+  .panel{border:1px solid #bbb;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img class="logo" src="data:image/png;base64,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srq6uq6ubsKECQcOHOA4bteuXeXl5YSQzZs3jxw5kvawyMjICA0NLS0tNT2dzz77jGGY8PDwCxcuqNXquXPnBgYGDhkyxKi8cF5e3uDBg8vKyh48eLB161Zq0MbFxc2ZM4eWPj5+/LhcLueb3Ait4gMHDgQFBfFHPnv27NmzZ5s1noVLZmVlyeXy48eP033NmTMnLi6O7uvMmTM+Pj5Lly7VaDQcxy1fvjwmJobWBF64cCHdYFZW1tWrV42K+sfExLz//vuEkKNHjwYFBeXl5XEcd+rUKR8fn3nz5tGt7dy5U6FQUFud47i5c+f6+vru2bNHo9E8ePCgqftlYb9m7w59iujDw3HczJkzw8PDaXOTGzduPPXUU7yHIrwmpnsxeipKS0uDg4OfffbZgoIC+mA0dcAtsopptpNzpTqtX7++qqpq0aJFwh87d+6clpaWm5u7aNGinJyclJQUyuouXbooFIohQ4aEhIQghHr27Dl9+vS0tLT79+9nZ2dfvHhx3bp1zz333Pjx40tKSsrLy5GhrejYsWO7dOnSuXNnyxWGXV1du3fv/o9//OP27dsJCQl+fn73799PS0u7fv36pEmTnnvuub/97W8ymezevXtGK965cyc/P18qlQ4ePLhnz57u7u7z58+fMmXKsWPHjPpT+vj4qNXqr776ysXFhTaz+O9//3v8+PHXXnuN1tqOiooaOXJkampqS6x0YcA5NTV15MiRUVFRCCGpVPraa68dP378v//9L0KIYRipVJqQkCCRSDDGw4cPVyqVNTU1CKFevXp9/fXXly9fjo2NNeqvK5PJMjMzV61aRa+YTqerra3FGAcHB3t4eEyaNIlu7fnnn1coFDt37qQ2SO/evX19fUeOHCmRSDp37tzU/bKwX9O7Y9bSGTRo0KBBgxBC/v7+4eHh165dM70sFvbCP4EhISFPP/10jx49PDw83NzcmjpgS7HD5p1YhJATphNLpdJZs2bRB4VHcHDwunXrZsyYkZmZaaFdQKdOnSoqKurr60tLSwMDAzMyMvz9/U1vpJVtFDHGa9euXbFiRa9evVavXr148eL6+vqKiorFixe/8847Ta31008/vfnmmzt27Hj77bdjY2OXLFmyfv36rKysxYsXmx55165d9+3b98orr+zYsSMtLW3kyJH379/XaDT8kmKxWCaT3bp1q76+3sPDo4XX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" alt="Eauvéa"><h1>Diag<span>VMC</span></h1></div>
+  <div class="sub" id="hdrSub">Logement T1</div>
+</header>
+
+<main>
+<!-- LOGEMENT -->
+<section class="tab active" id="tab-logement">
+  <h2>Logement</h2>
+  <div class="panel">
+    <h3>Intervention</h3>
+    <label class="f" for="i-client">Client</label><input id="i-client" data-info="client" placeholder="Nom du client ou syndic">
+    <label class="f" for="i-adr">Adresse</label><input id="i-adr" data-info="adresse" placeholder="Adresse du logement">
+    <div class="grid2">
+      <div><label class="f" for="i-date">Date</label><input id="i-date" type="date" data-info="date"></div>
+      <div><label class="f" for="i-tech">Technicien</label><input id="i-tech" data-info="tech"></div>
+    </div>
+    <label class="f" for="i-vmc">Type de VMC</label>
+    <select id="i-vmc" data-info="vmc">
+      <option value="auto">Simple flux autoréglable</option>
+      <option value="hygroA">Simple flux hygroréglable A</option>
+      <option value="hygroB">Simple flux hygroréglable B</option>
+      <option value="df">Double flux</option>
+      <option value="gaz">VMC gaz</option>
+      <option value="nc">Inconnu</option>
+    </select>
+    <p class="hint" id="vmcHint"></p>
+  </div>
+
+  <div class="panel">
+    <h3>Nombre de pièces principales</h3>
+    <p class="hint" style="margin-top:0">Compte uniquement les pièces de vie. Le résultat donne le type du logement (T1, T2…) et fixe les débits de référence.</p>
+    <div class="counter"><div class="lbl">Séjour / salle à manger<small>Même si la cuisine est ouverte dessus</small></div>
+      <div class="stepper"><button data-step="sejour" data-d="-1" aria-label="Moins">−</button><output id="c-sejour">1</output><button data-step="sejour" data-d="1" aria-label="Plus">+</button></div></div>
+    <div class="counter"><div class="lbl">Chambres</div>
+      <div class="stepper"><button data-step="chambres" data-d="-1" aria-label="Moins">−</button><output id="c-chambres">0</output><button data-step="chambres" data-d="1" aria-label="Plus">+</button></div></div>
+    <div class="counter"><div class="lbl">Autres pièces de vie<small>Bureau, salon séparé, mezzanine habitable</small></div>
+      <div class="stepper"><button data-step="autres" data-d="-1" aria-label="Moins">−</button><output id="c-autres">0</output><button data-step="autres" data-d="1" aria-label="Plus">+</button></div></div>
+    <div class="typebadge"><b id="typeT">T1</b><div id="typeTxt">1 pièce principale</div></div>
+    <details class="help">
+      <summary>Comment compter les pièces ?</summary>
+      <p>Une pièce principale est une pièce destinée au séjour ou au sommeil : séjour, salle à manger, chambres, bureau.</p>
+      <p>Ne comptent pas : cuisine (même ouverte), salle de bains, salle d'eau, WC, couloir, entrée, cellier, buanderie, dressing, garage.</p>
+      <p>Exemple : séjour avec cuisine américaine + 2 chambres = 3 pièces principales, donc un T3.</p>
+      <p>En cas de doute, le type indiqué sur le bail ou l'acte de vente fait foi.</p>
+    </details>
+  </div>
+
+  <div class="panel">
+    <h3>Tolérance de mesure</h3>
+    <div class="seg" id="tolSeg">
+      <button data-tol="0.10">10 %</button><button data-tol="0.15">15 %</button><button data-tol="0.20">20 %</button>
+    </div>
+    <p class="hint">Marge acceptée avant de déclarer un débit insuffisant. 15 % convient pour un anémomètre à fil chaud sur grille, 10 % avec un cône de mesure.</p>
+  </div>
+  <button class="btn primary" style="width:100%" data-goto="mesures">Passer aux mesures</button>
+</section>
+
+<!-- MESURES -->
+<section class="tab" id="tab-mesures">
+  <h2>Mesures par bouche</h2>
+  <div id="bouches"></div>
+  <div class="panel">
+    <h3>Ajouter une bouche</h3>
+    <div class="addrow">
+      <button class="btn small" data-add="cuisine">Cuisine</button>
+      <button class="btn small" data-add="sdb">Salle de bains</button>
+      <button class="btn small" data-add="eau">Salle d'eau</button>
+      <button class="btn small" data-add="wc">WC</button>
+      <button class="btn small" data-add="cellier">Cellier</button>
+      <button class="btn small" data-add="autre">Autre</button>
+    </div>
+    <p class="hint">Pour une cuisine avec deux vitesses, ajoute-la deux fois : une mesure en petite vitesse, une en grande vitesse.</p>
+  </div>
+  <div class="panel">
+    <div class="total"><div><h3 style="margin:0">Débit total (petite vitesse)</h3><div class="hint" id="totRef"></div></div><div class="n" id="totVal">–</div></div>
+    <div style="margin-top:8px" id="totPill"></div>
+  </div>
+</section>
+
+<!-- DIAGNOSTIC -->
+<section class="tab" id="tab-diag">
+  <h2>Contrôle visuel</h2>
+  <div id="checklist"></div>
+  <div class="panel">
+    <h3>Observations</h3>
+    <textarea id="remarques" placeholder="Constats, photos prises, préconisations…"></textarea>
+  </div>
+</section>
+
+<!-- RAPPORT -->
+<section class="tab" id="tab-rapport">
+  <h2 class="no-print">Rapport de diagnostic VMC</h2>
+  <div id="rapport"></div>
+  <div class="addrow no-print" style="margin-bottom:12px">
+    <button class="btn primary" id="btnPrint">Imprimer ou enregistrer en PDF</button>
+    <button class="btn" id="btnCopy">Copier le résumé</button>
+    <button class="btn ghost" id="btnReset">Nouveau diagnostic</button>
+  </div>
+  <textarea id="copyArea" class="no-print" style="display:none" readonly></textarea>
+</section>
+
+<!-- AIDE -->
+<section class="tab" id="tab-aide">
+  <h2>Aide</h2>
+  <div class="panel help-body">
+    <h3>Mesurer avec le Trotec TA300</h3>
+    <ol>
+      <li>Calcule la surface de la bouche dans l'onglet Mesures (diamètre ou dimensions). L'app affiche la valeur à saisir dans l'appareil.</li>
+      <li>Maintiens <b>Setup</b> 3 s, choisis « unit » et mets <b>m²</b>, puis « AREA » et saisis la surface (Unit ▲▼ pour la virgule et les chiffres, MEAN pour changer de chiffre, Enter pour valider). Maintiens Setup 3 s pour sortir.</li>
+      <li>Maintiens <b>HOLD/ZERO</b> 2 s capot fermé pour la remise à zéro, puis ouvre le capot du capteur.</li>
+      <li>Place la sonde avec la flèche orientée contre le sens de l'air.</li>
+      <li>Appuie sur <b>MEAN</b>, puis <b>Enter</b> sur 4 à 5 points répartis sur la bouche. Appuie de nouveau sur MEAN pour lire la moyenne.</li>
+      <li>Dans l'app, choisis ce que tu lis (FLOW ou VEL) et l'unité affichée par le TA300, puis saisis la valeur. L'app convertit en m³/h, l'unité de la réglementation, et t'indique la valeur cible à lire sur l'écran.</li>
+    </ol>
+    <p>Le TA300 donne le débit uniquement en <b>CMM</b> ou <b>CFM</b>, et la vitesse en m/s, km/h, ft/min, mph ou nœuds. Il n'affiche pas de m³/h.</p><p><b>Conseil :</b> saisis plutôt la vitesse en <b>m/s</b>. L'app utilise alors la surface exacte, alors que l'appareil arrondit la surface à 4 chiffres.</p>
+  </div>
+  <div class="panel help-body">
+    <h3>Faire une moyenne sur plusieurs points</h3>
+    <div id="meanHelpTpl"><p>L'air ne sort pas à la même vitesse partout sur une bouche : plus vite à certains endroits, plus lentement sur les bords. Une seule lecture peut fausser le débit de 20 à 30 %.</p>
+<div class="pattern">
+<figure><svg viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="48" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="55" cy="55" r="24" fill="none" stroke="currentColor" stroke-dasharray="3 3"/><g fill="#F2C200" stroke="#1A1600"><circle cx="55" cy="55" r="6"/><circle cx="55" cy="31" r="6"/><circle cx="55" cy="79" r="6"/><circle cx="31" cy="55" r="6"/><circle cx="79" cy="55" r="6"/></g></svg>Bouche ronde : 5 points</figure>
+<figure><svg viewBox="0 0 110 110" aria-hidden="true"><rect x="6" y="20" width="98" height="70" fill="none" stroke="currentColor" stroke-width="2"/><g fill="#F2C200" stroke="#1A1600"><circle cx="23" cy="38" r="6"/><circle cx="55" cy="38" r="6"/><circle cx="87" cy="38" r="6"/><circle cx="23" cy="72" r="6"/><circle cx="55" cy="72" r="6"/><circle cx="87" cy="72" r="6"/></g></svg>Rectangulaire : 6 points</figure>
+</div>
+<p><b>Où placer la sonde :</b> bouche ronde, un point au centre et quatre à mi-rayon (haut, bas, gauche, droite). Bouche rectangulaire, un quadrillage de 6 points répartis, ou 9 si la bouche est grande.</p>
+<p><b>À chaque point :</b> même distance de la grille (1 à 2 cm), flèche de la sonde contre le flux, attends 3 à 5 secondes que la valeur se stabilise.</p>
+<p><b>Méthode 1, dans l'app :</b> lis la valeur à chaque point et appuie sur Ajouter. L'app calcule la moyenne et le débit. Tu peux retirer un point avec ×.</p>
+<p><b>Méthode 2, sur le TA300 (moyenne multipoint) :</b></p>
+<ol><li>Appui court sur <b>MEAN</b> : MEAN s'affiche.</li><li>Place la sonde sur le premier point, appuie sur <b>Enter</b>.</li><li>Recommence Enter sur chaque point.</li><li>Appuie sur <b>MEAN</b> : MEAN clignote et la moyenne s'affiche.</li><li>Saisis cette moyenne comme un seul point dans l'app. Un nouvel appui sur MEAN te ramène à la mesure normale.</li></ol>
+<p><b>Méthode 3, moyenne dans le temps :</b> maintiens MEAN 2 s, appuie sur Enter pour lancer le chrono, balaye lentement toute la bouche pendant 20 à 30 s, puis appuie sur MEAN pour arrêter et lire la moyenne.</p>
+<p><b>Attention :</b> garde la même unité pour tous les points. Si un point est très éloigné des autres, refais-le : la sonde était peut-être mal orientée ou dans un courant d'air.</p></div>
+  </div>
+  <div class="panel help-body">
+    <h3>Conversions</h3>
+    <ul>
+      <li>1 CMM (m³/min) = 60 m³/h</li>
+      <li>1 CFM (ft³/min) ≈ 1,70 m³/h</li>
+      <li>Débit (m³/h) = vitesse (m/s) × surface (m²) × 3 600</li>
+      <li>Surface ronde = π × D² ÷ 4 ; rectangulaire = longueur × largeur</li>
+    </ul>
+  </div>
+  <div class="panel help-body">
+    <h3>Débits réglementaires (arrêté du 24 mars 1982)</h3>
+    <p>Débits extraits par pièce de service, en m³/h, selon le nombre de pièces principales.</p>
+    <div class="tablewrap"><table class="ref">
+      <tr><th>Pièces</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5+</th></tr>
+      <tr><td>Cuisine (pointe)</td><td>75</td><td>90</td><td>105</td><td>120</td><td>135</td></tr>
+      <tr><td>Salle de bains / douche</td><td>15</td><td>15</td><td>30</td><td>30</td><td>30</td></tr>
+      <tr><td>Autre salle d'eau</td><td>15</td><td>15</td><td>15</td><td>15</td><td>15</td></tr>
+      <tr><td>WC unique</td><td>15</td><td>15</td><td>15</td><td>30</td><td>30</td></tr>
+      <tr><td>WC multiples (chacun)</td><td>15</td><td>15</td><td>15</td><td>15</td><td>15</td></tr>
+    </table></div>
+    <p style="margin-top:12px">Débits minimaux en petite vitesse :</p>
+    <div class="tablewrap"><table class="ref">
+      <tr><th>Pièces</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7+</th></tr>
+      <tr><td>Total minimal</td><td>35</td><td>60</td><td>75</td><td>90</td><td>105</td><td>120</td><td>135</td></tr>
+      <tr><td>Cuisine minimal</td><td>20</td><td>30</td><td>45</td><td>45</td><td>45</td><td>45</td><td>45</td></tr>
+    </table></div>
+    <p><b>VMC hygroréglable :</b> les débits peuvent être inférieurs à ces valeurs. La référence est l'Avis Technique du fabricant ; les résultats de l'app sont alors indicatifs.</p>
+    <p>Autres textes utiles : NF DTU 68.3 (installation), règlement sanitaire départemental, Avis Techniques des systèmes hygro.</p>
+  </div>
+  <div class="panel help-body">
+    <h3>Lire les résultats</h3>
+    <ul>
+      <li><b>Conforme</b> : débit au moins égal à la référence, tolérance déduite.</li>
+      <li><b>Limite</b> : légèrement sous la référence. Refaire la mesure, vérifier l'encrassement de la bouche.</li>
+      <li><b>Insuffisant</b> : bouche encrassée ou obturée, gaine écrasée ou déboîtée, caisson faible, manque d'entrées d'air.</li>
+      <li><b>Élevé</b> : bouche inadaptée (ex. bouche cuisine en SDB) ou mauvais réglage, surconsommation de chauffage.</li>
+    </ul>
+    <p>Mesure avec fenêtres et portes extérieures fermées, portes intérieures fermées, hotte arrêtée.</p>
+  </div>
+  <div class="panel">
+    <h3>Affichage</h3>
+    <div class="seg" id="themeSeg"><button data-theme-v="auto">Auto</button><button data-theme-v="light">Clair</button><button data-theme-v="dark">Sombre</button></div>
+  </div>
+</section>
+</main>
+
+<nav class="bottom" aria-label="Sections">
+  <div class="in" role="tablist">
+    <button role="tab" data-tab="logement" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Logement</button>
+    <button role="tab" data-tab="mesures"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/></svg>Mesures</button>
+    <button role="tab" data-tab="diag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Contrôle</button>
+    <button role="tab" data-tab="rapport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Rapport</button>
+    <button role="tab" data-tab="aide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg>Aide</button>
+  </div>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+const KEY='diagvmc:v1';
+const LOGO=document.querySelector('img.logo').src;
+const MEANHELP=document.getElementById('meanHelpTpl').innerHTML;
+const TYPES={cuisine:'Cuisine',sdb:'Salle de bains / douche',eau:"Autre salle d'eau",wc:'WC',cellier:'Cellier / buanderie',autre:'Autre pièce'};
+const VMC={auto:'Simple flux autoréglable',hygroA:'Hygroréglable A',hygroB:'Hygroréglable B',df:'Double flux',gaz:'VMC gaz',nc:'Inconnu'};
+const REF={pointe:[75,90,105,120,135],miniCuis:[20,30,45,45,45,45,45],totMini:[35,60,75,90,105,120,135]};
+const CHECK=[
+ {g:'Caisson / moteur',items:[
+  ['cais_fonct','Le caisson fonctionne'],
+  ['cais_bruit','Pas de bruit ni de vibration anormale'],
+  ['cais_acces','Caisson accessible pour l\'entretien'],
+  ['cais_vit','Commande petite / grande vitesse opérationnelle','Interrupteur ou bouche cuisine temporisée']]},
+ {g:'Réseau de gaines',items:[
+  ['gai_ecrase','Gaines non écrasées, non percées'],
+  ['gai_rac','Raccords étanches, gaines bien emboîtées'],
+  ['gai_rejet','Rejet vers l\'extérieur','Pas de rejet dans les combles'],
+  ['gai_hotte','Aucune hotte raccordée sur le réseau VMC']]},
+ {g:'Bouches d\'extraction',items:[
+  ['bou_prop','Bouches propres, non encrassées'],
+  ['bou_adapt','Bouches adaptées à chaque pièce','Débit ou type hygro correspondant'],
+  ['bou_fix','Bouches bien fixées et étanches au plafond / mur']]},
+ {g:'Entrées d\'air et transit',items:[
+  ['ea_pres','Entrée d\'air dans chaque pièce principale'],
+  ['ea_obtu','Entrées d\'air non obturées'],
+  ['ea_type','Entrées d\'air adaptées au système','Hygroréglables si VMC hygro B'],
+  ['tr_porte','Détalonnage des portes intérieures','Environ 1 cm, 2 cm pour la cuisine']]},
+ {g:'Signes dans le logement',items:[
+  ['sy_cond','Pas de condensation excessive sur les vitrages'],
+  ['sy_moi','Pas de moisissures ni de traces d\'humidité'],
+  ['sy_odeur','Pas d\'odeurs persistantes']]},
+ {g:'Sécurité gaz',items:[
+  ['gaz_dsc','Si VMC gaz : dispositif de sécurité collective présent','Contrôle réservé à un professionnel qualifié gaz']]}
+];
+
+let S=load();
+function blank(){return{info:{client:'',adresse:'',date:new Date().toISOString().slice(0,10),tech:'Thibaud',vmc:'auto'},
+  pieces:{sejour:1,chambres:0,autres:0},tol:0.15,bouches:[],check:{},remarques:'',tab:'logement',theme:'auto'};}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);(o.bouches||[]).forEach(b=>{if(!U[b.unite])b.unite='cmm';});return Object.assign(blank(),o);}}catch(e){}return blank();}
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},250);}
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const fr=(n,d=0)=>n.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function nbP(){const p=S.pieces;return Math.max(1,(p.sejour|0)+(p.chambres|0)+(p.autres|0));}
+const i5=p=>Math.min(Math.max(p,1),5)-1, i7=p=>Math.min(Math.max(p,1),7)-1;
+const isHygro=()=>S.info.vmc==='hygroA'||S.info.vmc==='hygroB';
+function uid(){return Math.random().toString(36).slice(2,9);}
+
+/* calculs */
+function area(b){
+  if(b.forme==='rect'){const l=parseF(b.l),h=parseF(b.h);return l>0&&h>0?l*h/1e6:null;}
+  const d=parseF(b.d);return d>0?Math.PI*Math.pow(d/1000,2)/4:null;}
+function parseF(v){const n=parseFloat(String(v??'').replace(',','.'));return isFinite(n)?n:NaN;}
+function vals(s){return String(s||'').split(/[\s;\/]+/).map(x=>parseF(x)).filter(n=>isFinite(n)&&n>=0);}
+const U={cmm:{l:'CMM',k:'flow',f:1/60},cfm:{l:'CFM',k:'flow',f:1/1.699011},ms:{l:'m/s',k:'vel',f:1},kmh:{l:'km/h',k:'vel',f:3.6},fpm:{l:'ft/min',k:'vel',f:1/0.00508}};
+function toMs(v,u){return v/U[u].f;}
+function devTarget(b,ref){ /* référence m³/h -> valeur à lire sur l'écran du TA300 */
+  if(ref==null)return null;const u=U[b.unite];if(!u)return null;
+  if(u.k==='flow')return ref*u.f;
+  const a=area(b);if(!a)return null;return ref/3600/a*u.f;}
+function flow(b){
+  const v=vals(b.valeurs);if(!v.length)return null;
+  const m=v.reduce((a,c)=>a+c,0)/v.length;
+  const u=U[b.unite];if(!u)return null;
+  if(u.k==='flow')return{q:m/u.f,mean:m,n:v.length};
+  const a=area(b);return a?{q:toMs(m,b.unite)*a*3600,mean:m,n:v.length}:{q:null,mean:m,n:v.length,noArea:true};}
+function refFor(b){
+  const p=nbP(), nWc=S.bouches.filter(x=>x.type==='wc').length;
+  switch(b.type){
+    case 'cuisine':return b.vitesse==='grande'?{v:REF.pointe[i5(p)],l:'Débit de pointe cuisine'}:{v:REF.miniCuis[i7(p)],l:'Débit minimal cuisine'};
+    case 'sdb':return{v:p>=3?30:15,l:'Salle de bains / douche'};
+    case 'eau':return{v:15,l:"Autre salle d'eau"};
+    case 'wc':return nWc<=1?{v:p>=4?30:15,l:'WC unique'}:{v:15,l:'WC multiples'};
+    default:return{v:null,l:'Pas de valeur réglementaire'};
+  }}
+const ST={ok:'Conforme',limite:'Limite',ko:'Insuffisant',eleve:'Élevé',info:'Sans référence',none:'Non mesuré'};
+function status(q,ref,b){
+  if(q==null)return'none'; if(ref==null)return'info';
+  const r=q/ref,t=S.tol;
+  if(r>=1-t){ if(r>1.6 && !(b&&b.type==='cuisine'&&b.vitesse==='grande')) return'eleve'; return'ok'; }
+  if(r>=1-2*t)return'limite'; return'ko';}
+function taArea(a){if(a==null)return'–';return a<10?a.toFixed(3):a<100?a.toFixed(2):a.toFixed(1);}
+
+/* rendu général */
+function renderAll(){
+  $$('[data-info]').forEach(el=>{el.value=S.info[el.dataset.info]??'';});
+  ['sejour','chambres','autres'].forEach(k=>$('#c-'+k).textContent=S.pieces[k]);
+  $$('#tolSeg button').forEach(b=>b.setAttribute('aria-pressed',String(parseFloat(b.dataset.tol)===S.tol)));
+  $$('#themeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeV===S.theme)));
+  applyTheme();
+  $('#remarques').value=S.remarques||'';
+  updatePieces(); renderBouches(); renderCheck(); showTab(S.tab);
+}
+function applyTheme(){const r=document.documentElement;if(S.theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',S.theme);}
+function updatePieces(){
+  const p=nbP();$('#typeT').textContent='T'+p;
+  $('#typeTxt').textContent=p+(p>1?' pièces principales':' pièce principale');
+  $('#hdrSub').textContent='Logement T'+p+' · '+(VMC[S.info.vmc]||'');
+  $('#vmcHint').textContent=isHygro()?"Les débits d'une VMC hygro dépendent de l'Avis Technique du fabricant. Les références affichées seront indicatives.":
+    S.info.vmc==='gaz'?"VMC gaz : le contrôle du dispositif de sécurité collective relève d'un professionnel qualifié gaz.":'';
+}
+function showTab(t){
+  S.tab=t;save();
+  $$('.tab').forEach(s=>s.classList.toggle('active',s.id==='tab-'+t));
+  $$('nav.bottom button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));
+  if(t==='rapport')renderRapport();
+  window.scrollTo(0,0);
+}
+
+/* bouches */
+function newBouche(type){return{id:uid(),type,vitesse:type==='cuisine'?'petite':'unique',forme:'rond',d:type==='cuisine'?'125':'80',l:'',h:'',unite:'cmm',valeurs:'',note:''};}
+function seg(field,opts,cur){return '<div class="seg">'+opts.map(([v,l])=>`<button data-f="${field}" data-v="${v}" aria-pressed="${v===cur}">${l}</button>`).join('')+'</div>';}
+function cardHTML(b){
+  const uk=U[b.unite].k, pts=vals(b.valeurs);
+  const unitHint=uk==='flow'?'Lis la ligne du bas (FLOW) de l\'écran du TA300':'Lis la ligne du haut (VEL) de l\'écran du TA300. Plus précis : l\'app utilise la surface exacte';
+  return `
+  <div class="bh">
+    <select data-f="type" aria-label="Type de pièce">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}"${k===b.type?' selected':''}>${v}</option>`).join('')}</select>
+    <button class="btn small ghost" data-del aria-label="Supprimer cette bouche">Supprimer</button>
+  </div>
+  ${b.type==='cuisine'?`<label class="f">Vitesse pendant la mesure</label>${seg('vitesse',[['petite','Petite vitesse'],['grande','Grande vitesse']],b.vitesse)}`:''}
+  <div class="sep"></div>
+  <label class="f" style="margin-top:0">Dimension de la bouche</label>
+  ${seg('forme',[['rond','Ronde'],['rect','Rectangulaire']],b.forme)}
+  ${b.forme==='rond'
+    ?`<label class="f">Diamètre (mm)</label><input inputmode="decimal" data-f="d" value="${esc(b.d)}" list="diams" placeholder="ex. 125">`
+    :`<div class="grid2"><div><label class="f">Longueur (mm)</label><input inputmode="decimal" data-f="l" value="${esc(b.l)}"></div><div><label class="f">Largeur (mm)</label><input inputmode="decimal" data-f="h" value="${esc(b.h)}"></div></div>`}
+  <div class="area" data-area></div>
+  <div class="sep"></div>
+  <label class="f" style="margin-top:0">Ce que tu lis sur le TA300</label>
+  ${seg('mode',[['flow','Débit (FLOW)'],['vel','Vitesse (VEL)']],uk)}
+  <label class="f">Unité affichée</label>
+  ${uk==='flow'?seg('unite',[['cmm','CMM'],['cfm','CFM']],b.unite):seg('unite',[['ms','m/s'],['kmh','km/h'],['fpm','ft/min']],b.unite)}
+  <label class="f">Points de mesure (${pts.length})</label>
+  ${pts.length?`<div class="pts">${pts.map((v,i)=>`<span class="chip"><b>P${i+1}</b>${fr(v,3)}<button data-rmpt="${i}" aria-label="Retirer le point ${i+1}">×</button></span>`).join('')}</div>`:''}
+  <div class="addpt"><input inputmode="decimal" data-pt placeholder="Point ${pts.length+1} en ${U[b.unite].l}" aria-label="Valeur du point ${pts.length+1}"><button class="btn small primary" data-addpt>Ajouter</button></div>
+  <p class="hint">${unitHint}. Ajoute chaque lecture : l'app calcule la moyenne.</p>
+  <details class="help"><summary>Comment faire une moyenne sur plusieurs points ?</summary>${MEANHELP}</details>
+  <div data-calc></div>
+  <label class="f">Note</label>
+  <input data-f="note" value="${esc(b.note)}" placeholder="État de la bouche, remarque…">`;
+}
+function renderBouches(){
+  const box=$('#bouches');
+  if(!S.bouches.length){box.innerHTML='<div class="panel"><p style="margin:0">Aucune bouche pour l\'instant. Ajoute la première pièce à mesurer ci-dessous.</p></div>';updateTotal();return;}
+  box.innerHTML='';
+  S.bouches.forEach(b=>{const el=document.createElement('div');el.className='panel bouche';el.dataset.id=b.id;el.innerHTML=cardHTML(b);box.appendChild(el);updateCard(b);});
+  updateTotal();
+}
+function updateCard(b){
+  const el=document.querySelector(`.bouche[data-id="${b.id}"]`);if(!el)return;
+  const a=area(b);
+  el.querySelector('[data-area]').innerHTML=a?`<span>Surface : <b>${fr(a,5)} m²</b></span><span>AREA à saisir sur le TA300 : <span class="ta">${taArea(a)}</span></span>`:'<span class="hint" style="margin:0">Indique les dimensions pour calculer la surface.</span>';
+  const f=flow(b), r=refFor(b), q=f&&f.q!=null?f.q:null, st=status(q,r.v,b);
+  el.dataset.st=st;
+  let gauge='';
+  if(r.v){const max=r.v*1.6, fill=q?Math.min(q/max,1)*100:0, tk=r.v/max*100, tl=(r.v*(1-S.tol))/max*100;
+    gauge=`<div class="gauge" aria-hidden="true"><div class="tol" style="left:${tl}%;width:${tk-tl}%"></div><div class="fill" style="width:${fill}%"></div><div class="tick" style="left:calc(${tk}% - 1px)"></div></div>`;}
+  const ul=U[b.unite].l, tgt=devTarget(b,r.v);
+  const detail=f?(f.noArea?'Surface manquante pour convertir la vitesse en débit':`Moyenne de ${f.n} point${f.n>1?'s':''} sur le TA300`):'En attente de mesure';
+  el.querySelector('[data-calc]').innerHTML=`
+   <div class="lcd">
+     <div class="top"><span>${U[b.unite].k==='flow'?'FLOW':'VEL'}</span><span>${esc(TYPES[b.type])}${b.type==='cuisine'?' · '+(b.vitesse==='grande'?'GV':'PV'):''}</span></div>
+     <div class="val ${f?'':'empty'}">${f?fr(f.mean,b.unite==='fpm'?0:2):'– – –'}<small>${ul}</small></div>
+     <div class="foot" style="justify-content:flex-end"><span>${tgt!=null?'Cible réglementaire : ≥ '+fr(tgt,b.unite==='fpm'?0:2)+' '+ul:''}</span></div>
+     ${gauge}
+     <div class="foot"><span>${q!=null?'Soit '+fr(q,0)+' m³/h':''}</span><span>${r.v?'Réf. '+r.v+' m³/h'+(isHygro()?' (indicatif)':''):r.l}${q&&r.v?' · '+fr(q/r.v*100,0)+' %':''}</span></div>
+   </div>
+   <p class="hint">${detail}</p>
+   <div style="margin-top:6px"><span class="pill ${st}">${ST[st]}</span></div>`;
+}
+function updateTotal(){
+  const base=S.bouches.filter(b=>!(b.type==='cuisine'&&b.vitesse==='grande'));
+  let sum=0,n=0;base.forEach(b=>{const f=flow(b);if(f&&f.q!=null){sum+=f.q;n++;}});
+  const ref=REF.totMini[i7(nbP())];
+  $('#totVal').textContent=n?fr(sum,0)+' m³/h':'–';
+  $('#totRef').textContent='Minimum réglementaire T'+nbP()+' : '+ref+' m³/h'+(isHygro()?' (indicatif)':'');
+  const st=n?status(sum,ref,null):'none';
+  $('#totPill').innerHTML=`<span class="pill ${st}">${ST[st]}</span>`;
+  return{sum,n,ref,st};
+}
+function findB(el){const c=el.closest('.bouche');return c?S.bouches.find(b=>b.id===c.dataset.id):null;}
+
+/* checklist */
+function renderCheck(){
+  $('#checklist').innerHTML=CHECK.map(g=>`<div class="panel"><h3>${g.g}</h3>${g.items.map(([k,l,s])=>{
+    const v=S.check[k]||'';
+    return `<div class="ck"><span>${l}${s?`<small>${s}</small>`:''}</span><div class="tri" data-ck="${k}">
+      <button data-v="ok" aria-pressed="${v==='ok'}">OK</button><button data-v="nok" aria-pressed="${v==='nok'}">Défaut</button><button data-v="na" aria-pressed="${v==='na'}">N/C</button></div></div>`;}).join('')}</div>`).join('');
+}
+
+/* rapport */
+function rows(){return S.bouches.map(b=>{const f=flow(b),r=refFor(b),q=f&&f.q!=null?f.q:null;return{b,q,r,st:status(q,r.v,b)};});}
+function defauts(){const out=[];CHECK.forEach(g=>g.items.forEach(([k,l])=>{if(S.check[k]==='nok')out.push(l);}));return out;}
+function conclusion(R,T,D){
+  const ko=R.filter(x=>x.st==='ko'),lim=R.filter(x=>x.st==='limite'),el=R.filter(x=>x.st==='eleve'),mes=R.filter(x=>x.q!=null);
+  if(!mes.length)return'Aucune mesure saisie.';
+  let t=[];
+  if(!ko.length&&!lim.length&&T.st!=='ko')t.push('Les débits mesurés sont conformes aux valeurs de référence'+(isHygro()?' (comparaison indicative, système hygroréglable).':'.'));
+  if(ko.length)t.push('Débit insuffisant sur : '+ko.map(x=>TYPES[x.b.type]+(x.b.type==='cuisine'?' ('+(x.b.vitesse==='grande'?'GV':'PV')+')':'')).join(', ')+'.');
+  if(lim.length)t.push('Débit en limite sur : '+lim.map(x=>TYPES[x.b.type]).join(', ')+'.');
+  if(el.length)t.push('Débit élevé sur : '+el.map(x=>TYPES[x.b.type]).join(', ')+'. Vérifier le type de bouche.');
+  if(T.n&&T.st==='ko')t.push('Le débit total en petite vitesse est inférieur au minimum réglementaire.');
+  if(D.length)t.push(D.length+' défaut'+(D.length>1?'s':'')+' relevé'+(D.length>1?'s':'')+' au contrôle visuel.');
+  return t.join(' ');
+}
+function renderRapport(){
+  const R=rows(),T=updateTotal(),D=defauts(),I=S.info,p=nbP();
+  $('#rapport').innerHTML=`
+  <div class="panel">
+    <div class="replogo"><img src="${LOGO}" alt="Eauvéa"><div class="t">Diagnostic VMC<div class="hint" style="margin:0;font-weight:400">Mesure des débits d'extraction</div></div></div>
+    <div class="grid2">
+      <div><div class="hint" style="margin:0">Client</div><b>${esc(I.client)||'–'}</b></div>
+      <div><div class="hint" style="margin:0">Date</div><b>${I.date?new Date(I.date).toLocaleDateString('fr-FR'):'–'}</b></div>
+      <div><div class="hint" style="margin:0">Adresse</div><b>${esc(I.adresse)||'–'}</b></div>
+      <div><div class="hint" style="margin:0">Technicien</div><b>${esc(I.tech)||'–'}</b></div>
+      <div><div class="hint" style="margin:0">Logement</div><b>T${p} (${p} pièce${p>1?'s':''} principale${p>1?'s':''})</b></div>
+      <div><div class="hint" style="margin:0">Système</div><b>${VMC[I.vmc]}</b></div>
+    </div>
+  </div>
+  <div class="panel"><h3>Mesures</h3>
+    ${R.length?`<div class="tablewrap"><table><tr><th>Pièce</th><th>Bouche</th><th>Lecture TA300</th><th>Débit</th><th>Réf.</th><th>État</th></tr>
+    ${R.map(x=>`<tr><td>${TYPES[x.b.type]}${x.b.type==='cuisine'?' '+(x.b.vitesse==='grande'?'GV':'PV'):''}</td><td>${x.b.forme==='rond'?'Ø'+esc(x.b.d):esc(x.b.l)+'×'+esc(x.b.h)} mm</td><td class="num">${flow(x.b)?fr(flow(x.b).mean,2)+' '+U[x.b.unite].l:'–'}</td><td class="num">${x.q!=null?fr(x.q,0)+' m³/h':'–'}</td><td class="num">${x.r.v??'–'}</td><td><span class="pill ${x.st}">${ST[x.st]}</span></td></tr>`).join('')}
+    <tr><td><b>Total PV</b></td><td></td><td></td><td class="num"><b>${T.n?fr(T.sum,0)+' m³/h':'–'}</b></td><td class="num">${T.ref}</td><td><span class="pill ${T.n?T.st:'none'}">${ST[T.n?T.st:'none']}</span></td></tr>
+    </table></div>
+    <p class="hint">Tolérance appliquée : ${Math.round(S.tol*100)} %. Référence : arrêté du 24 mars 1982${isHygro()?' ; système hygroréglable, valeurs indicatives (voir Avis Technique)':''}. Mesure à l'anémomètre à fil chaud.</p>`:'<p>Aucune bouche mesurée.</p>'}
+  </div>
+  <div class="panel"><h3>Contrôle visuel</h3>
+    ${D.length?'<ul>'+D.map(d=>`<li>${esc(d)}</li>`).join('')+'</ul>':'<p style="margin:0">Aucun défaut relevé.</p>'}
+    ${S.bouches.filter(b=>b.note).length?'<p><b>Notes par bouche :</b></p><ul>'+S.bouches.filter(b=>b.note).map(b=>`<li>${TYPES[b.type]} : ${esc(b.note)}</li>`).join('')+'</ul>':''}
+    ${S.remarques?`<p><b>Observations :</b><br>${esc(S.remarques).replace(/\n/g,'<br>')}</p>`:''}
+  </div>
+  <div class="panel"><h3>Conclusion</h3><div class="concl">${esc(conclusion(R,T,D))}</div></div>`;
+}
+function resumeText(){
+  const R=rows(),T=updateTotal(),D=defauts(),I=S.info;
+  let t=`DIAGNOSTIC VMC\n${I.client||''}\n${I.adresse||''}\nDate : ${I.date?new Date(I.date).toLocaleDateString('fr-FR'):''}\nLogement T${nbP()} – ${VMC[I.vmc]}\n\nMESURES\n`;
+  R.forEach(x=>{const f=flow(x.b);t+=`- ${TYPES[x.b.type]}${x.b.type==='cuisine'?' '+(x.b.vitesse==='grande'?'GV':'PV'):''} : ${f?fr(f.mean,2)+' '+U[x.b.unite].l+' lu, soit ':''}${x.q!=null?fr(x.q,0)+' m³/h':'non mesuré'} (réf. ${x.r.v??'–'}) – ${ST[x.st]}\n`;});
+  t+=`Total petite vitesse : ${T.n?fr(T.sum,0):'–'} m³/h (min. ${T.ref})\n`;
+  if(D.length)t+='\nDÉFAUTS\n'+D.map(d=>'- '+d).join('\n')+'\n';
+  if(S.remarques)t+='\nOBSERVATIONS\n'+S.remarques+'\n';
+  t+='\nCONCLUSION\n'+conclusion(R,T,D);
+  return t;
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+function refreshCard(b,focus){const el=document.querySelector(`.bouche[data-id="${b.id}"]`);if(!el)return;const d=el.querySelector('details.help');const open=d&&d.open;el.innerHTML=cardHTML(b);if(open)el.querySelector('details.help').open=true;S.bouches.forEach(updateCard);updateTotal();if(focus){const i=el.querySelector('[data-pt]');i&&i.focus();}}
+function addPt(src){const b=findB(src);if(!b)return;const inp=src.closest('.bouche').querySelector('[data-pt]');const v=parseF(inp.value);
+  if(!isFinite(v)||v<0){inp.focus();toast('Saisis une valeur numérique');return;}
+  const a=vals(b.valeurs);a.push(v);b.valeurs=a.join(' ');refreshCard(b,true);save();}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-pt]')){e.preventDefault();addPt(e.target);}});
+/* événements */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.tab){showTab(t.dataset.tab);return;}
+  if(t.dataset.goto){showTab(t.dataset.goto);return;}
+  if(t.dataset.step){const k=t.dataset.step,min=k==='sejour'?1:0;S.pieces[k]=Math.max(min,Math.min(12,(S.pieces[k]|0)+(+t.dataset.d)));$('#c-'+k).textContent=S.pieces[k];updatePieces();S.bouches.forEach(updateCard);updateTotal();save();return;}
+  if(t.dataset.tol){S.tol=parseFloat(t.dataset.tol);$$('#tolSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));S.bouches.forEach(updateCard);updateTotal();save();return;}
+  if(t.dataset.themeV){S.theme=t.dataset.themeV;$$('#themeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));applyTheme();save();return;}
+  if(t.dataset.add){const b=newBouche(t.dataset.add);S.bouches.push(b);renderBouches();save();const el=document.querySelector(`.bouche[data-id="${b.id}"]`);el&&el.scrollIntoView({block:'start'});return;}
+  if(t.hasAttribute('data-del')){const b=findB(t);if(b&&confirm('Supprimer cette bouche ?')){S.bouches=S.bouches.filter(x=>x!==b);renderBouches();save();}return;}
+  if(t.dataset.f&&t.dataset.v){const b=findB(t);if(!b)return;if(t.dataset.f==='mode'){if(U[b.unite].k!==t.dataset.v)b.unite=t.dataset.v==='flow'?'cmm':'ms';}else b[t.dataset.f]=t.dataset.v;const el=t.closest('.bouche');el.innerHTML=cardHTML(b);updateCard(b);S.bouches.forEach(updateCard);updateTotal();save();return;}
+  const tri=t.closest('.tri');if(tri){const k=tri.dataset.ck;S.check[k]=S.check[k]===t.dataset.v?'':t.dataset.v;tri.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.check[k])));save();return;}
+  if(t.hasAttribute('data-addpt')){addPt(t);return;}
+  if(t.dataset.rmpt!=null){const b=findB(t);if(!b)return;const a=vals(b.valeurs);a.splice(+t.dataset.rmpt,1);b.valeurs=a.join(' ');refreshCard(b);save();return;}
+  if(t.id==='btnPrint'){renderRapport();window.print();return;}
+  if(t.id==='btnCopy'){const txt=resumeText();const fallback=()=>{const a=$('#copyArea');a.style.display='block';a.style.minHeight='220px';a.value=txt;a.focus();a.select();toast('Sélectionne et copie le texte');};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>toast('Résumé copié'),fallback);}else fallback();return;}
+  if(t.id==='btnReset'){if(confirm('Effacer ce diagnostic et en commencer un nouveau ?')){const th=S.theme,tech=S.info.tech,tol=S.tol;S=blank();S.theme=th;S.info.tech=tech;S.tol=tol;save();renderAll();showTab('logement');toast('Nouveau diagnostic');}return;}
+});
+document.addEventListener('input',e=>{
+  const el=e.target;
+  if(el.dataset.info){S.info[el.dataset.info]=el.value;if(el.dataset.info==='vmc'){updatePieces();S.bouches.forEach(updateCard);updateTotal();}save();return;}
+  if(el.id==='remarques'){S.remarques=el.value;save();return;}
+  if(el.dataset.f){const b=findB(el);if(!b)return;
+    if(el.tagName==='SELECT'){b.type=el.value;if(b.type==='cuisine'&&b.vitesse==='unique')b.vitesse='petite';const c=el.closest('.bouche');c.innerHTML=cardHTML(b);}
+    else b[el.dataset.f]=el.value;
+    S.bouches.forEach(updateCard);updateTotal();save();}
+});
+
+const dl=document.createElement('datalist');dl.id='diams';dl.innerHTML=[80,100,125,150,160,200].map(v=>`<option value="${v}">`).join('');document.body.appendChild(dl);
+renderAll();
+})();
+</script>
+</body>
+</html>
