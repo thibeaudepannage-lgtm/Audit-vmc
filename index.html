@@ -117,6 +117,12 @@ details.help p,details.help li{font-size:.9rem}
 .pattern{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0}
 .pattern figure{margin:0;text-align:center;font-size:.8rem;color:var(--muted)}
 .pattern svg{width:110px;height:110px;display:block;color:var(--ink)}
+.entree{border-left:5px solid var(--line)}
+.entree[data-st="ok"]{border-left-color:var(--ok)}
+.entree[data-st="limite"]{border-left-color:var(--warn)}
+.entree[data-st="ko"]{border-left-color:var(--ko)}
+.testblock+.testblock{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
+.result{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--bg);font-size:.92rem}
 /* checklist-css */
 .ck{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
 .ck:last-child{border-bottom:0}
@@ -241,6 +247,22 @@ nav.bottom button[aria-selected="true"]::after{content:"";width:22px;height:3px;
     <div class="total"><div><h3 style="margin:0">Débit total (petite vitesse)</h3><div class="hint" id="totRef"></div></div><div class="n" id="totVal">–</div></div>
     <div style="margin-top:8px" id="totPill"></div>
   </div>
+
+  <h2>Entrées d'air</h2>
+  <div id="entrees"></div>
+  <div class="panel">
+    <h3>Ajouter une entrée d'air</h3>
+    <div class="addrow">
+      <button class="btn small" data-addea="sejour">Séjour</button>
+      <button class="btn small" data-addea="chambre">Chambre</button>
+      <button class="btn small" data-addea="bureau">Bureau</button>
+      <button class="btn small" data-addea="autre">Autre pièce</button>
+    </div>
+    <p class="hint">Une fiche par pièce principale. Si la pièce a plusieurs entrées identiques, indique leur nombre.</p>
+  </div>
+
+  <h2>Tests des entrées d'air</h2>
+  <div class="panel" id="tests"></div>
 </section>
 
 <!-- DIAGNOSTIC -->
@@ -325,6 +347,22 @@ nav.bottom button[aria-selected="true"]::after{content:"";width:22px;height:3px;
     <p>Autres textes utiles : NF DTU 68.3 (installation), règlement sanitaire départemental, Avis Techniques des systèmes hygro.</p>
   </div>
   <div class="panel help-body">
+    <h3>Entrées d'air</h3>
+    <p><b>Principe :</b> l'air neuf entre par les pièces principales (séjour, chambres) et ressort par les pièces de service. Chaque pièce principale doit avoir au moins une entrée d'air, et aucune pièce de service équipée d'une bouche ne doit en avoir.</p>
+    <p><b>Module :</b> le chiffre inscrit sur l'entrée (15, 22, 30, 45) est son débit en m³/h sous 20 Pa. Repère courant en autoréglable : 22 ou 30 par chambre, 45 ou 2 × 22 pour le séjour. En hygro B, entrées hygroréglables selon l'Avis Technique.</p>
+    <p><b>Position :</b> en partie haute, idéalement au-dessus de 1,80 m. Entrées acoustiques en zone bruyante.</p>
+    <p><b>Changement de fenêtres :</b> dans un logement ventilé mécaniquement, les nouvelles fenêtres doivent comporter des entrées d'air, sauf si la pièce en a déjà ailleurs.</p>
+    <p><b>Les tests :</b></p>
+    <ul>
+      <li><b>Feuille :</b> une feuille de papier devant l'entrée doit être plaquée vers l'intérieur.</li>
+      <li><b>Porte :</b> une porte d'entrée qui résiste ou siffle signale un manque d'entrées d'air.</li>
+      <li><b>Fenêtre entrouverte :</b> si le débit d'une bouche augmente de plus de 20 % quand on entrouvre une fenêtre, les entrées d'air brident la VMC. C'est le test le plus probant avec le TA300.</li>
+      <li><b>Dépression :</b> avec un manomètre, environ 10 à 20 Pa est normal. Au-delà de 30 à 40 Pa, les entrées d'air sont insuffisantes.</li>
+    </ul>
+    <p>La mesure au TA300 sur une entrée d'air reste indicative : la surface réelle de la fente est mal connue et le flux est irrégulier.</p>
+    <p>Textes : arrêté du 24 mars 1982, NF DTU 68.3, arrêté du 3 mai 2007 (remplacement de fenêtres), Avis Techniques des systèmes hygro.</p>
+  </div>
+  <div class="panel help-body">
     <h3>Lire les résultats</h3>
     <ul>
       <li><b>Conforme</b> : débit au moins égal à la référence, tolérance déduite.</li>
@@ -390,8 +428,8 @@ const CHECK=[
 
 let S=load();
 function blank(){return{info:{client:'',adresse:'',date:new Date().toISOString().slice(0,10),tech:'Thibaud',vmc:'auto'},
-  pieces:{sejour:1,chambres:0,autres:0},tol:0.15,bouches:[],check:{},remarques:'',tab:'logement',theme:'auto'};}
-function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);(o.bouches||[]).forEach(b=>{if(!U[b.unite])b.unite='cmm';});return Object.assign(blank(),o);}}catch(e){}return blank();}
+  pieces:{sejour:1,chambres:0,autres:0},tol:0.15,bouches:[],entrees:[],tests:{porte:'',bouche:'',pts2:'',pa:''},check:{},remarques:'',tab:'logement',theme:'auto'};}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);(o.bouches||[]).forEach(b=>{if(!U[b.unite])b.unite='cmm';});const bl=blank();o.tests=Object.assign(bl.tests,o.tests||{});return Object.assign(bl,o);}}catch(e){}return blank();}
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},250);}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fr=(n,d=0)=>n.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
@@ -444,7 +482,7 @@ function renderAll(){
   $$('#themeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeV===S.theme)));
   applyTheme();
   $('#remarques').value=S.remarques||'';
-  updatePieces(); renderBouches(); renderCheck(); showTab(S.tab);
+  updatePieces(); renderBouches(); renderEntrees(); renderCheck(); showTab(S.tab);
 }
 function applyTheme(){const r=document.documentElement;if(S.theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',S.theme);}
 function updatePieces(){
@@ -459,6 +497,7 @@ function showTab(t){
   $$('.tab').forEach(s=>s.classList.toggle('active',s.id==='tab-'+t));
   $$('nav.bottom button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));
   if(t==='rapport')renderRapport();
+  if(t==='mesures')renderTests();
   window.scrollTo(0,0);
 }
 
@@ -497,10 +536,10 @@ function cardHTML(b){
 }
 function renderBouches(){
   const box=$('#bouches');
-  if(!S.bouches.length){box.innerHTML='<div class="panel"><p style="margin:0">Aucune bouche pour l\'instant. Ajoute la première pièce à mesurer ci-dessous.</p></div>';updateTotal();return;}
+  if(!S.bouches.length){box.innerHTML='<div class="panel"><p style="margin:0">Aucune bouche pour l\'instant. Ajoute la première pièce à mesurer ci-dessous.</p></div>';updateTotal();renderTests();return;}
   box.innerHTML='';
   S.bouches.forEach(b=>{const el=document.createElement('div');el.className='panel bouche';el.dataset.id=b.id;el.innerHTML=cardHTML(b);box.appendChild(el);updateCard(b);});
-  updateTotal();
+  updateTotal();renderTests();
 }
 function updateCard(b){
   const el=document.querySelector(`.bouche[data-id="${b.id}"]`);if(!el)return;
@@ -532,6 +571,7 @@ function updateTotal(){
   $('#totRef').textContent='Minimum réglementaire T'+nbP()+' : '+ref+' m³/h'+(isHygro()?' (indicatif)':'');
   const st=n?status(sum,ref,null):'none';
   $('#totPill').innerHTML=`<span class="pill ${st}">${ST[st]}</span>`;
+  if(typeof updateTests==='function')updateTests();
   return{sum,n,ref,st};
 }
 function findB(el){const c=el.closest('.bouche');return c?S.bouches.find(b=>b.id===c.dataset.id):null;}
@@ -544,12 +584,120 @@ function renderCheck(){
       <button data-v="ok" aria-pressed="${v==='ok'}">OK</button><button data-v="nok" aria-pressed="${v==='nok'}">Défaut</button><button data-v="na" aria-pressed="${v==='na'}">N/C</button></div></div>`;}).join('')}</div>`).join('');
 }
 
-/* rapport */
+/* entrées d'air */
+const PIECES={sejour:'Séjour',chambre:'Chambre',bureau:'Bureau',autre:'Autre pièce'};
+const EAT={auto:'Autoréglable',hygro:'Hygroréglable',acou:'Acoustique',acouhygro:'Acoustique hygro',nc:'Inconnu'};
+const ETAT={ok:'Bon état',sale:'Encrassée',obt:'Obturée',abs:'Absente'};
+const FEU={asp:'Aspirée',faible:'Faible',rien:'Pas d\'aspiration'};
+const EST={ok:'Correcte',limite:'À surveiller',ko:'Défaillante',none:'Non contrôlée'};
+function newEntree(p){return{id:uid(),piece:p,nb:'1',module:p==='sejour'?'45':'22',type:'auto',etat:'',feuille:'',L:'',l:'',pts:'',note:''};}
+function eStatus(e){
+  if(e.etat==='abs'||e.etat==='obt'||e.feuille==='rien')return'ko';
+  if(e.etat==='sale'||e.feuille==='faible')return'limite';
+  if(e.etat==='ok'||e.feuille==='asp')return'ok';
+  return'none';}
+function eFlow(e){const v=vals(e.pts),L=parseF(e.L),l=parseF(e.l);if(!v.length)return null;const m=v.reduce((a,c)=>a+c,0)/v.length;
+  return{mean:m,n:v.length,q:(L>0&&l>0)?m*L*l/1e6*3600:null};}
+function sumModules(){let s=0,ok=true;S.entrees.forEach(e=>{if(e.etat==='abs')return;const m=parseF(e.module),n=parseF(e.nb)||1;if(isFinite(m))s+=m*n;else ok=false;});return{s,ok};}
+function eSeg(f,opts,cur){return '<div class="seg">'+opts.map(([v,l])=>`<button data-ea="${f}" data-v="${v}" aria-pressed="${v===cur}">${l}</button>`).join('')+'</div>';}
+function eCardHTML(e){
+  const pts=vals(e.pts);
+  return `<div class="bh">
+    <select data-ea="piece" aria-label="Pièce">${Object.entries(PIECES).map(([k,v])=>`<option value="${k}"${k===e.piece?' selected':''}>${v}</option>`).join('')}</select>
+    <button class="btn small ghost" data-dele aria-label="Supprimer cette entrée d'air">Supprimer</button></div>
+  <div class="grid2">
+    <div><label class="f">Nombre d'entrées</label><input inputmode="numeric" data-ea="nb" value="${esc(e.nb)}"></div>
+    <div><label class="f">Type</label><select data-ea="type">${Object.entries(EAT).map(([k,v])=>`<option value="${k}"${k===e.type?' selected':''}>${v}</option>`).join('')}</select></div>
+  </div>
+  <label class="f">Module (m³/h, inscrit sur l'entrée d'air)</label>
+  ${eSeg('module',[['15','15'],['22','22'],['30','30'],['45','45'],['nc','?']],e.module)}
+  <label class="f">État</label>
+  ${eSeg('etat',Object.entries(ETAT),e.etat)}
+  <label class="f">Test de la feuille (VMC en marche, fenêtres fermées)</label>
+  ${eSeg('feuille',[['asp','Aspirée'],['faible','Faible'],['rien','Rien']],e.feuille)}
+  <details class="help"${pts.length||e.L?' open':''}><summary>Mesure indicative au TA300 (facultatif)</summary>
+    <p class="hint">Mesure la vitesse en m/s devant la fente intérieure, sur plusieurs points. La surface de la fente est approximative : le résultat n'est qu'un ordre de grandeur.</p>
+    <div class="grid2"><div><label class="f">Longueur fente (mm)</label><input inputmode="decimal" data-ea="L" value="${esc(e.L)}"></div><div><label class="f">Hauteur fente (mm)</label><input inputmode="decimal" data-ea="l" value="${esc(e.l)}"></div></div>
+    <label class="f">Points en m/s (${pts.length})</label>
+    ${pts.length?`<div class="pts">${pts.map((v,i)=>`<span class="chip"><b>P${i+1}</b>${fr(v,2)}<button data-ermpt="${i}" aria-label="Retirer le point ${i+1}">×</button></span>`).join('')}</div>`:''}
+    <div class="addpt"><input inputmode="decimal" data-ept placeholder="Point ${pts.length+1} en m/s" aria-label="Vitesse point ${pts.length+1}"><button class="btn small primary" data-eaddpt>Ajouter</button></div>
+  </details>
+  <div data-ecalc></div>
+  <label class="f">Note</label><input data-ea="note" value="${esc(e.note)}" placeholder="Position, marque, remarque…">`;
+}
+function updateECard(e){
+  const el=document.querySelector(`.entree[data-id="${e.id}"]`);if(!el)return;
+  const st=eStatus(e),f=eFlow(e),m=parseF(e.module);el.dataset.st=st;
+  let q='';if(f){q=f.q!=null?`Débit indicatif : environ <b>${fr(f.q,0)} m³/h</b> par entrée (moyenne ${fr(f.mean,2)} m/s)${isFinite(m)?`, pour un module ${m}`:''}.`:`Moyenne ${fr(f.mean,2)} m/s. Indique les dimensions de la fente pour estimer le débit.`;}
+  el.querySelector('[data-ecalc]').innerHTML=`${q?`<p class="hint">${q}</p>`:''}<div style="margin-top:8px"><span class="pill ${st}">${EST[st]}</span></div>`;
+}
+function renderEntrees(){
+  const box=$('#entrees');
+  if(!S.entrees.length){box.innerHTML='<div class="panel"><p style="margin:0">Aucune entrée d\'air relevée. Ajoute une fiche par pièce principale.</p></div>';updateTests();return;}
+  box.innerHTML='';
+  S.entrees.forEach(e=>{const el=document.createElement('div');el.className='panel entree';el.dataset.id=e.id;el.innerHTML=eCardHTML(e);box.appendChild(el);updateECard(e);});
+  updateTests();
+}
+function findE(el){const c=el.closest('.entree');return c?S.entrees.find(e=>e.id===c.dataset.id):null;}
+function refreshE(e,focus){const el=document.querySelector(`.entree[data-id="${e.id}"]`);if(!el)return;el.innerHTML=eCardHTML(e);updateECard(e);updateTests();if(focus){const i=el.querySelector('[data-ept]');i&&i.focus();}}
+function eAddPt(src){const e=findE(src);if(!e)return;const inp=src.closest('.entree').querySelector('[data-ept]');const v=parseF(inp.value);
+  if(!isFinite(v)||v<0){inp.focus();toast('Saisis une valeur numérique');return;}const a=vals(e.pts);a.push(v);e.pts=a.join(' ');refreshE(e,true);save();}
+
+/* tests globaux */
+function bLabel(b,i){return (i+1)+'. '+TYPES[b.type]+(b.type==='cuisine'?' '+(b.vitesse==='grande'?'GV':'PV'):'');}
+function renderTests(){
+  const T=S.tests, tb=S.bouches.find(b=>b.id===T.bouche);
+  $('#tests').innerHTML=`
+  <div class="testblock"><h3>Test de la porte d'entrée</h3>
+    <p class="hint" style="margin-top:0">Fenêtres fermées, VMC en marche : ouvre et ferme la porte d'entrée.</p>
+    <div class="seg"><button data-test="porte" data-v="ok" aria-pressed="${T.porte==='ok'}">Normale</button><button data-test="porte" data-v="ko" aria-pressed="${T.porte==='ko'}">Résiste ou siffle</button></div>
+  </div>
+  <div class="testblock"><h3>Test fenêtre entrouverte</h3>
+    <p class="hint" style="margin-top:0">Choisis une bouche déjà mesurée fenêtres fermées (idéalement la cuisine), entrouvre une fenêtre, puis refais la mesure au même endroit et dans la même unité.</p>
+    <label class="f">Bouche de référence</label>
+    <select data-testf="bouche"><option value="">Choisir…</option>${S.bouches.map((b,i)=>`<option value="${b.id}"${b.id===T.bouche?' selected':''}>${bLabel(b,i)}</option>`).join('')}</select>
+    ${tb?`<label class="f">Mesure fenêtre entrouverte en ${U[tb.unite].l} (moyenne ou un point)</label><input inputmode="decimal" data-testf="pts2" value="${esc(T.pts2)}" placeholder="ex. 2,4">`:''}
+    <div data-tres="fen"></div>
+  </div>
+  <div class="testblock"><h3>Dépression du logement</h3>
+    <p class="hint" style="margin-top:0">Avec un manomètre différentiel, entre l'intérieur et l'extérieur, fenêtres fermées. Le TA300 ne mesure pas la pression.</p>
+    <label class="f">Dépression mesurée (Pa)</label><input inputmode="decimal" data-testf="pa" value="${esc(T.pa)}" placeholder="ex. 15">
+    <div data-tres="pa"></div>
+  </div>
+  <div class="testblock"><h3>Bilan des modules</h3><div data-tres="mod"></div></div>`;
+  updateTests();
+}
+function testFen(){const T=S.tests,b=S.bouches.find(x=>x.id===T.bouche);if(!b)return null;
+  const f1=flow(b),f2=flow(Object.assign({},b,{valeurs:T.pts2}));if(!f1||f1.q==null||!f2||f2.q==null)return{b,wait:true};
+  const g=(f2.q-f1.q)/f1.q;return{b,q1:f1.q,q2:f2.q,g,st:g>0.2?'ko':g>0.1?'limite':'ok'};}
+function testPa(){const v=parseF(S.tests.pa);if(!isFinite(v))return null;return{v,st:v>35?'ko':v>20?'limite':'ok'};}
+function updateTotalQuiet(){let sum=0,n=0;S.bouches.filter(b=>!(b.type==='cuisine'&&b.vitesse==='grande')).forEach(b=>{const f=flow(b);if(f&&f.q!=null){sum+=f.q;n++;}});return{sum,n};}
+function updateTests(){
+  const box=$('#tests');if(!box||!box.innerHTML)return;
+  const r1=testFen(),el1=box.querySelector('[data-tres="fen"]');
+  if(el1)el1.innerHTML=!r1?'':r1.wait?'<p class="hint">Il faut une mesure sur la bouche choisie et la mesure fenêtre entrouverte.</p>':
+    `<div class="result">Fermé : <b>${fr(r1.q1,0)} m³/h</b>, entrouvert : <b>${fr(r1.q2,0)} m³/h</b>, soit ${r1.g>=0?'+':''}${fr(r1.g*100,0)} %.<br>${r1.st==='ko'?'Le débit remonte nettement : les entrées d\'air brident la VMC.':r1.st==='limite'?'Légère hausse : entrées d\'air un peu justes.':'Pas de hausse significative : les entrées d\'air sont suffisantes.'}<div style="margin-top:6px"><span class="pill ${r1.st}">${EST[r1.st]}</span></div></div>`;
+  const r2=testPa(),el2=box.querySelector('[data-tres="pa"]');
+  if(el2)el2.innerHTML=r2?`<div class="result">${r2.st==='ok'?'Dépression normale (jusqu\'à environ 20 Pa).':r2.st==='limite'?'Dépression un peu élevée : entrées d\'air à vérifier.':'Dépression trop forte : entrées d\'air insuffisantes ou obturées.'}<div style="margin-top:6px"><span class="pill ${r2.st}">${EST[r2.st]}</span></div></div>`:'';
+  const el3=box.querySelector('[data-tres="mod"]');
+  if(el3){const M=sumModules(),T=updateTotalQuiet();
+    el3.innerHTML=S.entrees.length?`<div class="result">Somme des modules : <b>${fr(M.s,0)} m³/h</b>${M.ok?'':' (certains modules inconnus)'}${T.n?`<br>Extraction mesurée en petite vitesse : <b>${fr(T.sum,0)} m³/h</b>`:''}<br><span class="hint">Les modules sont des débits nominaux sous 20 Pa. Leur somme doit être du même ordre que le débit extrait par la VMC.</span></div>`:'<p class="hint" style="margin:0">Ajoute les entrées d\'air pour obtenir le bilan.</p>';}
+}
+function eaConclusion(){
+  const t=[],ko=S.entrees.filter(e=>eStatus(e)==='ko'),lim=S.entrees.filter(e=>eStatus(e)==='limite');
+  if(ko.length)t.push('Entrées d\'air défaillantes (absentes, obturées ou sans aspiration) : '+ko.map(e=>PIECES[e.piece]).join(', ')+'.');
+  if(lim.length)t.push('Entrées d\'air à surveiller : '+lim.map(e=>PIECES[e.piece]).join(', ')+'.');
+  const f=testFen();if(f&&!f.wait&&f.st==='ko')t.push('Le débit d\'extraction augmente de '+fr(f.g*100,0)+' % fenêtre entrouverte : l\'apport d\'air neuf est insuffisant.');
+  const p=testPa();if(p&&p.st==='ko')t.push('Dépression de '+fr(p.v,0)+' Pa dans le logement, trop élevée.');
+  if(S.tests.porte==='ko')t.push('La porte d\'entrée résiste ou siffle : manque d\'entrées d\'air.');
+  return t.join(' ');}
+
+/* rapport-js */
 function rows(){return S.bouches.map(b=>{const f=flow(b),r=refFor(b),q=f&&f.q!=null?f.q:null;return{b,q,r,st:status(q,r.v,b)};});}
 function defauts(){const out=[];CHECK.forEach(g=>g.items.forEach(([k,l])=>{if(S.check[k]==='nok')out.push(l);}));return out;}
 function conclusion(R,T,D){
   const ko=R.filter(x=>x.st==='ko'),lim=R.filter(x=>x.st==='limite'),el=R.filter(x=>x.st==='eleve'),mes=R.filter(x=>x.q!=null);
-  if(!mes.length)return'Aucune mesure saisie.';
+  if(!mes.length)return S.entrees.length?'':'Aucune mesure saisie.';
   let t=[];
   if(!ko.length&&!lim.length&&T.st!=='ko')t.push('Les débits mesurés sont conformes aux valeurs de référence'+(isHygro()?' (comparaison indicative, système hygroréglable).':'.'));
   if(ko.length)t.push('Débit insuffisant sur : '+ko.map(x=>TYPES[x.b.type]+(x.b.type==='cuisine'?' ('+(x.b.vitesse==='grande'?'GV':'PV')+')':'')).join(', ')+'.');
@@ -559,11 +707,24 @@ function conclusion(R,T,D){
   if(D.length)t.push(D.length+' défaut'+(D.length>1?'s':'')+' relevé'+(D.length>1?'s':'')+' au contrôle visuel.');
   return t.join(' ');
 }
+function eaReport(){
+  const f=testFen(),p=testPa(),M=sumModules(),T=S.tests;
+  if(!S.entrees.length&&!(f&&!f.wait)&&!p&&!T.porte)return'';
+  const tl=[T.porte?`<li>Test de la porte : ${T.porte==='ok'?'normal':'la porte résiste ou siffle'}</li>`:'',
+    f&&!f.wait?`<li>Test fenêtre entrouverte (${esc(TYPES[f.b.type])}) : ${fr(f.q1,0)} → ${fr(f.q2,0)} m³/h (${f.g>=0?'+':''}${fr(f.g*100,0)} %)</li>`:'',
+    p?`<li>Dépression du logement : ${fr(p.v,0)} Pa</li>`:''].join('');
+  return `<div class="panel"><h3>Entrées d'air</h3>
+  ${S.entrees.length?`<div class="tablewrap"><table><tr><th>Pièce</th><th>Nb</th><th>Module</th><th>Type</th><th>État</th><th>Feuille</th><th>Statut</th></tr>
+  ${S.entrees.map(e=>{const st=eStatus(e),fl=eFlow(e);return`<tr><td>${PIECES[e.piece]}</td><td class="num">${esc(e.nb)}</td><td class="num">${e.module==='nc'?'?':esc(e.module)}</td><td>${EAT[e.type]}</td><td>${ETAT[e.etat]||'–'}</td><td>${FEU[e.feuille]||'–'}${fl&&fl.q!=null?' (≈'+fr(fl.q,0)+' m³/h)':''}</td><td><span class="pill ${st}">${EST[st]}</span></td></tr>`;}).join('')}
+  </table></div><p class="hint">Somme des modules : ${fr(M.s,0)} m³/h${M.ok?'':' (modules partiellement inconnus)'}.</p>`:''}
+  ${tl?'<ul>'+tl+'</ul>':''}
+  ${S.entrees.filter(e=>e.note).length?'<ul>'+S.entrees.filter(e=>e.note).map(e=>`<li>${PIECES[e.piece]} : ${esc(e.note)}</li>`).join('')+'</ul>':''}
+  </div>`;}
 function renderRapport(){
   const R=rows(),T=updateTotal(),D=defauts(),I=S.info,p=nbP();
   $('#rapport').innerHTML=`
   <div class="panel">
-    <div class="replogo"><img src="${LOGO}" alt="Eauvéa"><div class="t">Diagnostic VMC<div class="hint" style="margin:0;font-weight:400">Mesure des débits d'extraction</div></div></div>
+    <div class="replogo"><img src="${LOGO}" alt="Eauvéa"><div class="t">Diagnostic VMC<div class="hint" style="margin:0;font-weight:400">Débits d'extraction et entrées d'air</div></div></div>
     <div class="grid2">
       <div><div class="hint" style="margin:0">Client</div><b>${esc(I.client)||'–'}</b></div>
       <div><div class="hint" style="margin:0">Date</div><b>${I.date?new Date(I.date).toLocaleDateString('fr-FR'):'–'}</b></div>
@@ -580,12 +741,13 @@ function renderRapport(){
     </table></div>
     <p class="hint">Tolérance appliquée : ${Math.round(S.tol*100)} %. Référence : arrêté du 24 mars 1982${isHygro()?' ; système hygroréglable, valeurs indicatives (voir Avis Technique)':''}. Mesure à l'anémomètre à fil chaud.</p>`:'<p>Aucune bouche mesurée.</p>'}
   </div>
+  ${eaReport()}
   <div class="panel"><h3>Contrôle visuel</h3>
     ${D.length?'<ul>'+D.map(d=>`<li>${esc(d)}</li>`).join('')+'</ul>':'<p style="margin:0">Aucun défaut relevé.</p>'}
     ${S.bouches.filter(b=>b.note).length?'<p><b>Notes par bouche :</b></p><ul>'+S.bouches.filter(b=>b.note).map(b=>`<li>${TYPES[b.type]} : ${esc(b.note)}</li>`).join('')+'</ul>':''}
     ${S.remarques?`<p><b>Observations :</b><br>${esc(S.remarques).replace(/\n/g,'<br>')}</p>`:''}
   </div>
-  <div class="panel"><h3>Conclusion</h3><div class="concl">${esc(conclusion(R,T,D))}</div></div>`;
+  <div class="panel"><h3>Conclusion</h3><div class="concl">${esc([conclusion(R,T,D),eaConclusion()].filter(Boolean).join(' '))}</div></div>`;
 }
 function resumeText(){
   const R=rows(),T=updateTotal(),D=defauts(),I=S.info;
@@ -593,8 +755,14 @@ function resumeText(){
   R.forEach(x=>{const f=flow(x.b);t+=`- ${TYPES[x.b.type]}${x.b.type==='cuisine'?' '+(x.b.vitesse==='grande'?'GV':'PV'):''} : ${f?fr(f.mean,2)+' '+U[x.b.unite].l+' lu, soit ':''}${x.q!=null?fr(x.q,0)+' m³/h':'non mesuré'} (réf. ${x.r.v??'–'}) – ${ST[x.st]}\n`;});
   t+=`Total petite vitesse : ${T.n?fr(T.sum,0):'–'} m³/h (min. ${T.ref})\n`;
   if(D.length)t+='\nDÉFAUTS\n'+D.map(d=>'- '+d).join('\n')+'\n';
+  if(S.entrees.length){t+='\nENTRÉES D\'AIR\n';S.entrees.forEach(e=>{t+=`- ${PIECES[e.piece]} : ${e.nb} × module ${e.module==='nc'?'?':e.module}, ${ETAT[e.etat]||'état non relevé'}, feuille ${FEU[e.feuille]||'non testée'} – ${EST[eStatus(e)]}\n`;});}
+  const tf=testFen(),tp=testPa();
+  if(S.tests.porte)t+=`Test porte : ${S.tests.porte==='ok'?'normal':'résiste ou siffle'}\n`;
+  if(tf&&!tf.wait)t+=`Test fenêtre entrouverte : ${fr(tf.q1,0)} → ${fr(tf.q2,0)} m³/h (${tf.g>=0?'+':''}${fr(tf.g*100,0)} %)\n`;
+  if(tp)t+=`Dépression : ${fr(tp.v,0)} Pa\n`;
   if(S.remarques)t+='\nOBSERVATIONS\n'+S.remarques+'\n';
-  t+='\nCONCLUSION\n'+conclusion(R,T,D);
+  t+='\nCONCLUSION\n'+[conclusion(R,T,D),eaConclusion()].filter(Boolean).join(' ');
+
   return t;
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
@@ -603,7 +771,7 @@ function refreshCard(b,focus){const el=document.querySelector(`.bouche[data-id="
 function addPt(src){const b=findB(src);if(!b)return;const inp=src.closest('.bouche').querySelector('[data-pt]');const v=parseF(inp.value);
   if(!isFinite(v)||v<0){inp.focus();toast('Saisis une valeur numérique');return;}
   const a=vals(b.valeurs);a.push(v);b.valeurs=a.join(' ');refreshCard(b,true);save();}
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-pt]')){e.preventDefault();addPt(e.target);}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-pt]')){e.preventDefault();addPt(e.target);}if(e.key==='Enter'&&e.target.matches('[data-ept]')){e.preventDefault();eAddPt(e.target);}});
 /* événements */
 document.addEventListener('click',e=>{
   const t=e.target.closest('button');if(!t)return;
@@ -616,6 +784,12 @@ document.addEventListener('click',e=>{
   if(t.hasAttribute('data-del')){const b=findB(t);if(b&&confirm('Supprimer cette bouche ?')){S.bouches=S.bouches.filter(x=>x!==b);renderBouches();save();}return;}
   if(t.dataset.f&&t.dataset.v){const b=findB(t);if(!b)return;if(t.dataset.f==='mode'){if(U[b.unite].k!==t.dataset.v)b.unite=t.dataset.v==='flow'?'cmm':'ms';}else b[t.dataset.f]=t.dataset.v;const el=t.closest('.bouche');el.innerHTML=cardHTML(b);updateCard(b);S.bouches.forEach(updateCard);updateTotal();save();return;}
   const tri=t.closest('.tri');if(tri){const k=tri.dataset.ck;S.check[k]=S.check[k]===t.dataset.v?'':t.dataset.v;tri.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.check[k])));save();return;}
+  if(t.dataset.addea){const e=newEntree(t.dataset.addea);S.entrees.push(e);renderEntrees();save();const el=document.querySelector(`.entree[data-id="${e.id}"]`);el&&el.scrollIntoView({block:'start'});return;}
+  if(t.hasAttribute('data-dele')){const e=findE(t);if(e&&confirm('Supprimer cette entrée d\'air ?')){S.entrees=S.entrees.filter(x=>x!==e);renderEntrees();save();}return;}
+  if(t.dataset.ea&&t.dataset.v){const e=findE(t);if(!e)return;const k=t.dataset.ea;e[k]=(e[k]===t.dataset.v&&(k==='etat'||k==='feuille'))?'':t.dataset.v;refreshE(e);save();return;}
+  if(t.hasAttribute('data-eaddpt')){eAddPt(t);return;}
+  if(t.dataset.ermpt!=null){const e=findE(t);if(!e)return;const a=vals(e.pts);a.splice(+t.dataset.ermpt,1);e.pts=a.join(' ');refreshE(e);save();return;}
+  if(t.dataset.test){const k=t.dataset.test;S.tests[k]=S.tests[k]===t.dataset.v?'':t.dataset.v;t.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.tests[k])));save();return;}
   if(t.hasAttribute('data-addpt')){addPt(t);return;}
   if(t.dataset.rmpt!=null){const b=findB(t);if(!b)return;const a=vals(b.valeurs);a.splice(+t.dataset.rmpt,1);b.valeurs=a.join(' ');refreshCard(b);save();return;}
   if(t.id==='btnPrint'){renderRapport();window.print();return;}
@@ -627,6 +801,8 @@ document.addEventListener('input',e=>{
   const el=e.target;
   if(el.dataset.info){S.info[el.dataset.info]=el.value;if(el.dataset.info==='vmc'){updatePieces();S.bouches.forEach(updateCard);updateTotal();}save();return;}
   if(el.id==='remarques'){S.remarques=el.value;save();return;}
+  if(el.dataset.ea){const e=findE(el);if(!e)return;e[el.dataset.ea]=el.value;updateECard(e);updateTests();save();return;}
+  if(el.dataset.testf){S.tests[el.dataset.testf]=el.value;if(el.dataset.testf==='bouche'){S.tests.pts2='';renderTests();}else updateTests();save();return;}
   if(el.dataset.f){const b=findB(el);if(!b)return;
     if(el.tagName==='SELECT'){b.type=el.value;if(b.type==='cuisine'&&b.vitesse==='unique')b.vitesse='petite';const c=el.closest('.bouche');c.innerHTML=cardHTML(b);}
     else b[el.dataset.f]=el.value;
